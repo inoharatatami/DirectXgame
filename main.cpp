@@ -62,6 +62,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     HWND hwnd = CreateWindow(wc.lpszClassName, L"YJ114514", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, wrc.right - wrc.left, wrc.bottom - wrc.top, nullptr, nullptr, wc.hInstance, nullptr);
     ShowWindow(hwnd, SW_SHOW);
 
+
+
+
     IDXGIFactory7* dxgiFactory = nullptr;
     HRESULT hr = CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory));
     assert(SUCCEEDED(hr));
@@ -91,6 +94,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     }
     assert(device != nullptr);
     Log("Complete create D3D12Device!!!\n");
+#ifdef _DEBUG
+    ID3D12Debug1* debugController = nullptr;
+    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
+        debugController->EnableDebugLayer();
+        debugController->SetEnableGPUBasedValidation(TRUE);
+    }
+
+
+#endif 
 
     ID3D12CommandQueue* commandQueue = nullptr;
     D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
@@ -104,6 +116,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     ID3D12GraphicsCommandList* commandList = nullptr;
     hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
     assert(SUCCEEDED(hr));
+
+    ID3D12InfoQueue* infoQueue = nullptr;
+    if (SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&infoQueue)))) {
+        infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
+        infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
+        infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
+        D3D12_MESSAGE_ID denyIds[] = {
+         D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE
+        };
+        D3D12_MESSAGE_SEVERITY severities[] = { D3D12_MESSAGE_SEVERITY_INFO };
+        D3D12_INFO_QUEUE_FILTER filter{};
+        filter.DenyList.NumIDs = _countof(denyIds);
+        filter.DenyList.pIDList = denyIds;
+        filter.DenyList.NumSeverities = _countof(severities);
+        filter.DenyList.pSeverityList = severities;
+        infoQueue->Release();
+    }
+
+
 
     IDXGISwapChain3* swapChain = nullptr;
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
@@ -152,32 +183,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     assert(fenceEvent != nullptr);
 
 
-#ifdef _DEBUG
-    ID3D12Debug1* debugController = nullptr;
-    if(SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))){
-        debugController->EnableDebugLayer();
-        debugController->SetEnableGPUBasedValidation(TRUE);
-    }
 
 
-#endif 
-
-    ID3D12InfoQueue* infoQueue = nullptr;
-    if(SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&infoQueue)))){
-        infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
-        infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
-        infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
-        D3D12_MESSAGE_ID denyIds[] = {
-         D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE
-        };
-        D3D12_MESSAGE_SEVERITY severities[] = { D3D12_MESSAGE_SEVERITY_INFO };
-        D3D12_INFO_QUEUE_FILTER filter{};
-        filter.DenyList.NumIDs = _countof(denyIds);
-        filter.DenyList.pIDList = denyIds;
-        filter.DenyList.NumSeverities = _countof(severities);
-        filter.DenyList.pSeverityList = severities;
-        infoQueue->Release();
-    }
+   
      
 
     
@@ -195,10 +203,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
             //TransitionBarrier
             D3D12_RESOURCE_BARRIER barrier{};
+           
+
             barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+
             barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+
             barrier.Transition.pResource = swapChainResources[backBufferIndex];
+
             barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
+            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
             commandList->ResourceBarrier(1, &barrier);
 
 
@@ -206,10 +222,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f };
             commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
 
-            //RenderTarget->Present
-            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-            commandList->ResourceBarrier(1, &barrier);
+           
 
             commandList->Close();
 
