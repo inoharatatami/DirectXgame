@@ -5,9 +5,11 @@
 #include <dxgi1_6.h>
 #include <cassert>
 #include <format>
+#include <dxgidebug.h>
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "dxguid.lib")
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
     switch (msg) {
@@ -63,7 +65,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     ShowWindow(hwnd, SW_SHOW);
 
 
+#ifdef _DEBUG
+    ID3D12Debug1* debugController = nullptr;
+    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
+        debugController->EnableDebugLayer();
+        debugController->SetEnableGPUBasedValidation(TRUE);
+    }
 
+
+#endif 
 
     IDXGIFactory7* dxgiFactory = nullptr;
     HRESULT hr = CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory));
@@ -94,28 +104,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     }
     assert(device != nullptr);
     Log("Complete create D3D12Device!!!\n");
-#ifdef _DEBUG
-    ID3D12Debug1* debugController = nullptr;
-    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
-        debugController->EnableDebugLayer();
-        debugController->SetEnableGPUBasedValidation(TRUE);
-    }
-
-
-#endif 
-
-    ID3D12CommandQueue* commandQueue = nullptr;
-    D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
-    hr = device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&commandQueue));
-    assert(SUCCEEDED(hr));
-
-    ID3D12CommandAllocator* commandAllocator = nullptr;
-    hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
-    assert(SUCCEEDED(hr));
-
-    ID3D12GraphicsCommandList* commandList = nullptr;
-    hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
-    assert(SUCCEEDED(hr));
 
     ID3D12InfoQueue* infoQueue = nullptr;
     if (SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&infoQueue)))) {
@@ -134,6 +122,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         infoQueue->Release();
     }
 
+
+
+
+    ID3D12CommandQueue* commandQueue = nullptr;
+    D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
+    hr = device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&commandQueue));
+    assert(SUCCEEDED(hr));
+
+    ID3D12CommandAllocator* commandAllocator = nullptr;
+    hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
+    assert(SUCCEEDED(hr));
+
+    ID3D12GraphicsCommandList* commandList = nullptr;
+    hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+    assert(SUCCEEDED(hr));
+
+    
 
 
     IDXGISwapChain3* swapChain = nullptr;
@@ -211,7 +216,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
             barrier.Transition.pResource = swapChainResources[backBufferIndex];
 
-            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
 
             barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
@@ -222,7 +227,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f };
             commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
 
-           
+            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
+            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+
+            commandList->ResourceBarrier(1, &barrier);
 
             commandList->Close();
 
@@ -245,6 +254,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     }
 
     OutputDebugStringA("Hello, DirectX!\n");
+
+    ID
+
 
     return 0;
 }
