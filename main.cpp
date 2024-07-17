@@ -94,35 +94,11 @@ IDxcBlob* CompileShader(
     assert(SUCCEEDED(hr));
     Log(ConvertString(std::format(L"Compile Succeeded, path:{}, profile:{}", filePath, profile)));
     shaderSource->Release();
-    shaderSource->Release();
     return shaderBlob;
 }
 
-D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
-descriptionRootSignature.Flags =
-D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-ID3DBlob* signatureBlob = nullptr;
-ID3DBlob* errorBlob = nullptr;
-hr = D3D12SerializeRootSignature(&descriptionRootSignature,
-    D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
-if (FAILED(hr)){
-    Log(reinterpret_cast<char*>(errorBlob->getBufferPointer()));
-    assert(false);
-}
-ID3D12RootSignature* rootSignature = nullptr;
-hr = device->CreateRootSignature(0,
-    signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(),
-    IID_PPV_ARGS(&rootSignature));
-assert(SUCCEDED(hr));
-//InputLayout
-D3D12_INPUT_ELEMENT_DESC inputElemrntDescs[1] = {};
-inputElementDescs[0].SemanticName = "POSITION";
-inputElementDescs[0].SemanticIndex = 0;
-inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-inputElementDescs[0].AlignedByteoffset = D3D12_APPEND_ALIGNED_EKEMENT;
-D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
-inputLayoutDesc.pInputElementDescs = inputElementDescs;
-inputLayoutDesc.NumElements = _contof(inputElementDescs);
+
+
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     WNDCLASS wc{};
@@ -199,6 +175,70 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     }
 
 
+    D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
+    descriptionRootSignature.Flags =
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    ID3DBlob* signatureBlob = nullptr;
+    ID3DBlob* errorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature,
+        D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) {
+        Log(reinterpret_cast<char*>(errorBlob->getBufferPointer()));
+        assert(false);
+    }
+    ID3D12RootSignature* rootSignature = nullptr;
+    hr = device->CreateRootSignature(0,
+        signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(),
+        IID_PPV_ARGS(&rootSignature));
+    assert(SUCCEEDED(hr));
+    //InputLayout
+    D3D12_INPUT_ELEMENT_DESC inputElementDescs[1] = {};
+    inputElementDescs[0].SemanticName = "POSITION";
+    inputElementDescs[0].SemanticIndex = 0;
+    inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    inputElementDescs[0].AlignedByteoffset = D3D12_APPEND_ALIGNED_ELEMENT;
+    D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
+    inputLayoutDesc.pInputElementDescs = inputElementDescs;
+    inputLayoutDesc.NumElements = _countof(inputElementDescs);
+    //BlendState
+    D3D12_BLEND_DESC blenDesc{};
+    blendDesc.RenderTarget[0].RenderTargetWraiteMask =
+        D3D12_COLOR_WRITE_ENABLE_ALL;
+    //RasterizerState
+    D3D12_RASTERIZER_DESC rasterrizerDesc{};
+    rasterrizerDesc.CullMode = D3D12_CULL_MODE_BACK;
+    rasterrizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
+    //ShaderCompile
+    IDxcBlob* vertexShaderBlob = CompileShader(L"Object3D.vs.hlsl",
+        L"vs_6_0", dxcUtils, dxCompiler, includeHandler);
+    assert(vertexShaderBlob != nullptr);
+    IDxcBlob* pixelShaderBlob = CompileShader(L"Object3D.ps.hlsl",
+        L"ps_6_0", dxcUtils, dxcCompiler, includeHandler);
+
+
+    //PSO
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
+    graphicsPipelineStateDesc.pRootSignature = rootSignature;
+    graphicsPipelineStateDesc.InputLayout = inputLayoutDesc;
+    graphicsPipelineStateDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
+    graphicsPipelineStateDesc.PS = { pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize() };
+    graphicsPipelineStateDesc.BlendState = blendDesc;
+    graphicsPipelineStateDesc.RasterizerState = rasterizerDesc;
+    // 書き込み先のRTVの情報
+    graphicsPipelineStateDesc.NumRenderTargets = 1;
+    graphicsPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    graphicsPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    graphicsPipelineStateDesc.SampleDesc.Count = 1;
+    graphicsPipelineStateDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+    // 生成
+    ID3D12PipelineState* graphicsPipelineState = nullptr;
+    hr = device->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
+    assert(SUCCEEDED(hr));
+
+
+
+
+   
 
 
     ID3D12CommandQueue* commandQueue = nullptr;
