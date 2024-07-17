@@ -98,6 +98,31 @@ IDxcBlob* CompileShader(
     return shaderBlob;
 }
 
+D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
+descriptionRootSignature.Flags =
+D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+ID3DBlob* signatureBlob = nullptr;
+ID3DBlob* errorBlob = nullptr;
+hr = D3D12SerializeRootSignature(&descriptionRootSignature,
+    D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+if (FAILED(hr)){
+    Log(reinterpret_cast<char*>(errorBlob->getBufferPointer()));
+    assert(false);
+}
+ID3D12RootSignature* rootSignature = nullptr;
+hr = device->CreateRootSignature(0,
+    signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(),
+    IID_PPV_ARGS(&rootSignature));
+assert(SUCCEDED(hr));
+//InputLayout
+D3D12_INPUT_ELEMENT_DESC inputElemrntDescs[1] = {};
+inputElementDescs[0].SemanticName = "POSITION";
+inputElementDescs[0].SemanticIndex = 0;
+inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+inputElementDescs[0].AlignedByteoffset = D3D12_APPEND_ALIGNED_EKEMENT;
+D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
+inputLayoutDesc.pInputElementDescs = inputElementDescs;
+inputLayoutDesc.NumElements = _contof(inputElementDescs);
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     WNDCLASS wc{};
