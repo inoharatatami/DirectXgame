@@ -8,6 +8,7 @@
 #include <dxgidebug.h>
 #include<dxcapi.h>
 
+
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")
@@ -174,66 +175,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         infoQueue->Release();
     }
 
-    //ここから
-    D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
-    descriptionRootSignature.Flags =
-        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-    ID3DBlob* signatureBlob = nullptr;
-    ID3DBlob* errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature,
-        D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
-    if (FAILED(hr)) {
-        Log(reinterpret_cast<char*>(errorBlob->getBufferPointer()));
-        assert(false);
-    }
-    ID3D12RootSignature* rootSignature = nullptr;
-    hr = device->CreateRootSignature(0,
-        signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(),
-        IID_PPV_ARGS(&rootSignature));
-    assert(SUCCEEDED(hr));
-    //InputLayout
-    D3D12_INPUT_ELEMENT_DESC inputElementDescs[1] = {};
-    inputElementDescs[0].SemanticName = "POSITION";
-    inputElementDescs[0].SemanticIndex = 0;
-    inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-    inputElementDescs[0].AlignedByteoffset = D3D12_APPEND_ALIGNED_ELEMENT;
-    D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
-    inputLayoutDesc.pInputElementDescs = inputElementDescs;
-    inputLayoutDesc.NumElements = _countof(inputElementDescs);
-    //BlendState
-    D3D12_BLEND_DESC blenDesc{};
-    blendDesc.RenderTarget[0].RenderTargetWraiteMask =
-        D3D12_COLOR_WRITE_ENABLE_ALL;
-    //RasterizerState
-    D3D12_RASTERIZER_DESC rasterrizerDesc{};
-    rasterrizerDesc.CullMode = D3D12_CULL_MODE_BACK;
-    rasterrizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
-    //ShaderCompile
-    IDxcBlob* vertexShaderBlob = CompileShader(L"Object3D.vs.hlsl",
-        L"vs_6_0", dxcUtils, dxCompiler, includeHandler);
-    assert(vertexShaderBlob != nullptr);
-    IDxcBlob* pixelShaderBlob = CompileShader(L"Object3D.ps.hlsl",
-        L"ps_6_0", dxcUtils, dxcCompiler, includeHandler);
-
-
-    //PSO
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
-    graphicsPipelineStateDesc.pRootSignature = rootSignature;
-    graphicsPipelineStateDesc.InputLayout = inputLayoutDesc;
-    graphicsPipelineStateDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
-    graphicsPipelineStateDesc.PS = { pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize() };
-    graphicsPipelineStateDesc.BlendState = blendDesc;
-    graphicsPipelineStateDesc.RasterizerState = rasterizerDesc;
-    // 書き込み先のRTVの情報
-    graphicsPipelineStateDesc.NumRenderTargets = 1;
-    graphicsPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-    graphicsPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    graphicsPipelineStateDesc.SampleDesc.Count = 1;
-    graphicsPipelineStateDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
-    // 生成
-    ID3D12PipelineState* graphicsPipelineState = nullptr;
-    hr = device->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
-    assert(SUCCEEDED(hr));
+    
 
 
 
@@ -316,9 +258,117 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     hr = dxcUtils->CreateDefaultIncludeHandler(&includeHandler);
     assert(SUCCEEDED(hr));
 
-   
+    //ここから
+    D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
+    descriptionRootSignature.Flags =
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    ID3DBlob* signatureBlob = nullptr;
+    ID3DBlob* errorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature,
+        D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) {
+        Log(reinterpret_cast<char*>(errorBlob->GetBufferPointer()));
+        assert(false);
+    }
+    ID3D12RootSignature* rootSignature = nullptr;
+    hr = device->CreateRootSignature(0,
+        signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(),
+        IID_PPV_ARGS(&rootSignature));
+    assert(SUCCEEDED(hr));
+    //InputLayout
+    D3D12_INPUT_ELEMENT_DESC inputElementDescs[1] = {};
+    inputElementDescs[0].SemanticName = "POSITION";
+    inputElementDescs[0].SemanticIndex = 0;
+    inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    inputElementDescs[0].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+    D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
+    inputLayoutDesc.pInputElementDescs = inputElementDescs;
+    inputLayoutDesc.NumElements = _countof(inputElementDescs);
+    //BlendState
+    D3D12_BLEND_DESC blendDesc{};
+    blendDesc.RenderTarget[0].RenderTargetWriteMask =
+        D3D12_COLOR_WRITE_ENABLE_ALL;
+    //RasterizerState
+    D3D12_RASTERIZER_DESC rasterizerDesc{};
+    rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
+    rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
+    //ShaderCompile
+    IDxcBlob* vertexShaderBlob = CompileShader(L"Object3D.vs.hlsl",
+        L"vs_6_0", dxcUtils, dxcCompiler, includeHandler);
+    assert(vertexShaderBlob != nullptr);
+    IDxcBlob* pixelShaderBlob = CompileShader(L"Object3D.ps.hlsl",
+        L"ps_6_0", dxcUtils, dxcCompiler, includeHandler);
 
 
+    //PSO
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
+    graphicsPipelineStateDesc.pRootSignature = rootSignature;
+    graphicsPipelineStateDesc.InputLayout = inputLayoutDesc;
+    graphicsPipelineStateDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
+    graphicsPipelineStateDesc.PS = { pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize() };
+    graphicsPipelineStateDesc.BlendState = blendDesc;
+    graphicsPipelineStateDesc.RasterizerState = rasterizerDesc;
+    // 書き込み先のRTVの情報
+    graphicsPipelineStateDesc.NumRenderTargets = 1;
+    graphicsPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    graphicsPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    graphicsPipelineStateDesc.SampleDesc.Count = 1;
+    graphicsPipelineStateDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+    // 生成
+    ID3D12PipelineState* graphicsPipelineState = nullptr;
+    hr = device->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
+    assert(SUCCEEDED(hr));
+
+    // 頂点リソース用のヒープの設定
+    D3D12_HEAP_PROPERTIES uploadHeapProperties{};
+    uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD; 
+    // 頂点リソースの設定
+    D3D12_RESOURCE_DESC vertexResourceDesc{};
+    vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    vertexResourceDesc.Width = sizeof(Vector4) * 3; 
+    vertexResourceDesc.Height = 1;
+    vertexResourceDesc.DepthOrArraySize = 1;
+    vertexResourceDesc.MipLevels = 1;
+    vertexResourceDesc.SampleDesc.Count = 1;
+    vertexResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    // 実際に頂点リソースを作る
+    ID3D12Resource* vertexResource = nullptr;
+    hr = device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE,
+        &vertexResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+        IID_PPV_ARGS(&vertexResource));
+    assert(SUCCEEDED(hr));
+
+    //頂点バッファービュー
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
+    vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
+    vertexBufferView.SizeInBytes = sizeof(Vector4) * 3;
+    vertexBufferView.StrideInBytes = sizeof(Vector4);
+
+    //頂点データに書き込む
+    Vector4* vertexData = nullptr;
+    vertexResource ->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
+    vertexData[0] = { -0.5f, -0.5f, 0.0f, 1.0f };
+    vertexData[1] = { 0.0f, 0.5f, 0.0f, 1.0f };
+    vertexData[2] = { 0.5f, -0.5f,0.0f,1.0f };
+
+    // ビューポート
+    D3D12_VIEWPORT viewport{};
+    // クライアント領域のサイズと一緒にして画面全体に表示
+    viewport.Width = kClientWidth;
+    viewport.Height = kClientHeight;
+    viewport.TopLeftX = 0;
+    viewport.TopLeftY = 0;
+    viewport.MinDepth = 0.0f;
+    viewport.MaxDepth = 1.0f;
+    // シザー矩形
+    D3D12_RECT scissorRect{};
+    // 基本的にビューポートと同じ矩形が構成されるようにする
+    scissorRect.left = 0;
+    scissorRect.right = kClientWidth;
+    scissorRect.top = 0;
+    scissorRect.bottom = kClientHeight;
+
+    
     MSG msg{};
     while (msg.message != WM_QUIT) {
         if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
@@ -356,6 +406,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
             commandList->ResourceBarrier(1, &barrier);
 
             commandList->Close();
+
+            commandList->RSSetViewports(1, &viewport);
+            commandList->RSSetScissorRects(1, &scissorRect);
+            commandList->SetGraphicsRootSignature(rootSignature);
+            commandList->SetPipelineState(graphicsPipelineState);
+            commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            commandList->DrawInstanced(3, 1, 0, 0);
+
 
             ID3D12CommandList* commandLists[] = { commandList };
             commandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
@@ -403,6 +461,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         debug->Release();
     }
 
+    vertexResource->Release();
+    graphicsPipelineState->Release();
+    signatureBlob->Release();
+    if(errorBlob){
+     errorBlob->Release();
+    }
+    rootSignature->Release();
+    pixelShaderBlob->Release();
+    vertexShaderBlob->Release();
 
     return 0;
 }
